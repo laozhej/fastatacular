@@ -729,6 +729,40 @@
     "extra": {},
     "identifier": "WP_000184067.1"
    }
+  },
+  {
+   "source": "rcsb:1MBA_1",
+   "header": ">1MBA_1|Chain A|MYOGLOBIN|Aplysia limacina (6502)",
+   "expected": {
+    "prefix": null,
+    "accession": "1MBA_1",
+    "entry_name": null,
+    "pname": "Chain A|MYOGLOBIN|Aplysia limacina (6502)",
+    "os_name": null,
+    "ncbi_tax_id": null,
+    "gname": null,
+    "pe": null,
+    "sv": null,
+    "extra": {},
+    "identifier": "1MBA_1"
+   }
+  },
+  {
+   "source": "rcsb:4HHB_1",
+   "header": ">4HHB_1|Chains A, C|Hemoglobin subunit alpha|Homo sapiens (9606)",
+   "expected": {
+    "prefix": null,
+    "accession": "4HHB_1",
+    "entry_name": null,
+    "pname": "Chains A, C|Hemoglobin subunit alpha|Homo sapiens (9606)",
+    "os_name": null,
+    "ncbi_tax_id": null,
+    "gname": null,
+    "pe": null,
+    "sv": null,
+    "extra": {},
+    "identifier": "4HHB_1"
+   }
   }
  ],
  "known_differences": [

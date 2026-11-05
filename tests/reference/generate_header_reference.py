@@ -19,6 +19,13 @@ Three sources, none of which uses fastatacular to decide the expected values:
    identifier, accession, description and organism are ``accessionversion`` (twice),
    ``title`` and ``organism`` from esummary. The defline writes the organism in
    brackets at the end of the title.
+4. ``rcsb`` (added 2026-11-05): real entity headers from
+   ``www.rcsb.org/fasta/entry/<entry>``. The expected identifier and accession are
+   ``rcsb_id`` from the polymer-entity record at ``data.rcsb.org``, and the expected
+   description is rebuilt from that record's chain ids, ``pdbx_description`` and source
+   organism, then checked against the header text. No field reads the molecule name or
+   the organism: RCSB writes them as positional pipe fields, and nothing is read from
+   free text.
 
 Rerunning needs network access. The committed JSON is what the tests use.
 """
@@ -52,6 +59,10 @@ UNIPROT_ACCESSIONS = [
     "P27748",  # strain with slashes
 ]
 NCBI_ACCESSIONS = ["NP_000537.3", "XP_016880112.1", "AAA59174.1", "WP_000184067.1"]
+# RCSB polymer entities, as ``rcsb_id`` (``ENTRY_ENTITY``): one single-chain entity, whose
+# header's second field is ``Chain A``, and one two-chain entity, whose ``Chains A, C`` a
+# whitespace split would cut in half.
+RCSB_ENTITIES = ["1MBA_1", "4HHB_1"]
 
 _NONE = {
     "prefix": None,
@@ -394,11 +405,33 @@ def _ncbi(acc: str) -> dict[str, object]:
     }
 
 
+def _rcsb(rcsb_id: str) -> dict[str, object]:
+    entry, entity = rcsb_id.split("_")
+    d = json.loads(_get(f"https://data.rcsb.org/rest/v1/core/polymer_entity/{entry}/{entity}"))
+    lines = _get(f"https://www.rcsb.org/fasta/entry/{entry}").splitlines()
+    [header] = [ln for ln in lines if ln.startswith(">") and ln[1:].split("|")[0] == d["rcsb_id"]]
+    chains = d["rcsb_polymer_entity_container_identifiers"]["auth_asym_ids"]
+    organism = d["rcsb_entity_source_organism"][0]
+    label = f"Chain {chains[0]}" if len(chains) == 1 else f"Chains {', '.join(chains)}"
+    description = (
+        f"{label}|{d['rcsb_polymer_entity']['pdbx_description']}|"
+        f"{organism['ncbi_scientific_name']} ({organism['ncbi_taxonomy_id']})"
+    )
+    # The description derived from the entity record must be the header RCSB serves.
+    assert header == f">{d['rcsb_id']}|{description}", header
+    return {
+        "source": f"rcsb:{d['rcsb_id']}",
+        "header": header,
+        "expected": _exp(identifier=d["rcsb_id"], accession=d["rcsb_id"], pname=description),
+    }
+
+
 def main() -> None:
     cases = [{"source": "uniprot-help", "header": h, "expected": e} for h, e in SPEC]
     cases += [{"source": "ncbi-legacy/generic", "header": h, "expected": e} for h, e in OTHER]
     cases += [_uniprot(a) for a in UNIPROT_ACCESSIONS]
     cases += [_ncbi(a) for a in NCBI_ACCESSIONS]
+    cases += [_rcsb(e) for e in RCSB_ENTITIES]
     known = [{"source": "uniprot-help", "header": h, "expected": e, "reason": r} for h, e, r in KNOWN_DIFFERENCES]
     OUT.write_text(json.dumps({"cases": cases, "known_differences": known}, indent=1, ensure_ascii=False) + "\n")
     print(f"wrote {len(cases)} cases + {len(known)} known differences to {OUT}")

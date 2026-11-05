@@ -7,7 +7,7 @@ All notable changes to this project will be documented in this file.
 ### Fixed
 
 - `FastaIndex` could not find an entry whose header is a current RCSB PDB entity header
-  (`>1MBA_1|Chain A|MYOGLOBIN|Aplysia limacina`). 1.4.0 made the parser read its
+  (`>1MBA_1|Chain A|MYOGLOBIN|Aplysia limacina (6502)`). 1.4.0 made the parser read its
   identifier as the first pipe field, but the index kept splitting at the first
   whitespace, which falls inside `Chain A`, so it keyed the entry under `1MBA_1|Chain`
   with `key="identifier"` and under `Chain` with `key="accession"`: `index["1MBA_1"]`
