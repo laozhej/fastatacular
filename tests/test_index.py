@@ -52,6 +52,13 @@ FASTAS: list[tuple[str, str, bool]] = [
     ("blank_after", ">a\nMK\n\n\n>b\nAA\n\n", True),
     ("irregular_lines", ">a\nMK\nMKVL\nM\n>b\nAA\n", False),
     ("inner_blank_and_comment", ">a\nMK\n\nMK\n;c\nMK\n>b\nA A\n", False),
+    (
+        "rcsb",
+        ">1MBA_1|Chain A|MYOGLOBIN|Aplysia limacina\nMVLSEGEWQL\nVLHVW\n"
+        ">4HHB_1|Chains A, C|HEMOGLOBIN (DEOXY)|Homo sapiens\nVLSPADKTNV\n"
+        ">pdb|1MBA|A Chain A, MYOGLOBIN\nMVLSEGEWQL\n",
+        True,
+    ),
     ("reference_headers", _reference_fasta(), True),
 ]
 
@@ -136,6 +143,45 @@ def test_accession_key_of_a_bare_accession(tmp_path: Path) -> None:
     assert sorted(index) == ["NP_000549.1", "UniRef90_P69905", "seq_3"]
     for entry in read_fasta(path):
         assert index[entry.accession or entry.identifier].identifier == entry.identifier
+
+
+def test_rcsb_entity_round_trip(tmp_path: Path) -> None:
+    """An RCSB entity entry is reachable by what ``read_fasta`` gives for it.
+
+    The identifier of ``1MBA_1|Chain A|...`` is its first pipe field, not its first
+    whitespace word, so the index has to key it the way the parser reads it. Looking the
+    entry up by every form a caller holds is the check; asserting the key string is not,
+    because the builder and the lookup agreeing on a wrong key is the defect itself.
+    """
+    text = (
+        ">1MBA_1|Chain A|MYOGLOBIN|Aplysia limacina\nMVLSEGEWQL\n"
+        ">4HHB_1|Chains A, C|HEMOGLOBIN (DEOXY)|Homo sapiens\nVLSPADKTNV\n"
+    )
+    path = _write(tmp_path, "rcsb", text)
+    entries = read_fasta(path)
+    for key in ("identifier", "accession"):
+        index = FastaIndex(path, key=key)  # type: ignore[arg-type]
+        assert len(index) == len(entries)
+        for entry in entries:
+            for form in {entry.identifier, entry.accession or entry.identifier}:
+                assert index[form] == entry
+                assert index.identifier(form) == entry.identifier
+            # the first whitespace word cuts inside "Chain A" and is nobody's key
+            assert entry.identifier.split("|")[0] + "|Chain" not in index
+    # and the .fai names the entity, so from_fai keys it the same way
+    index = FastaIndex(path)
+    names = [row.split("\t")[0] for row in index.write_fai().read_text().splitlines()]
+    assert names == [e.identifier for e in entries]
+    assert all(FastaIndex.from_fai(path)[e.identifier] == e for e in entries)
+
+
+def test_older_pdb_identifier_is_unchanged(tmp_path: Path) -> None:
+    """``pdb|1MBA|A Chain A`` keeps the whitespace split: its second field is the entry."""
+    path = _write(tmp_path, "pdb", ">pdb|1MBA|A Chain A, MYOGLOBIN\nMVLS\n")
+    entry = read_fasta(path)[0]
+    assert entry.identifier == "pdb|1MBA|A" and entry.accession == "1MBA_A"
+    assert FastaIndex(path)[entry.identifier] == entry
+    assert FastaIndex(path, key="accession")[entry.accession] == entry
 
 
 def test_locate(tmp_path: Path) -> None:

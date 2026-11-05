@@ -290,8 +290,10 @@ by_acc = FastaIndex("human.fasta", key="accession")
 by_acc["P31946"]
 ```
 
-- By default keys are full identifiers (the first header word, the `.fai` name, as in
-  samtools). This works on target-decoy databases, where `sp|P1|X` and `DECOY_sp|P1|X`
+- By default keys are full identifiers (`SequenceEntry.identifier`: the first header
+  word, the `.fai` name, as in samtools, or the first pipe field of an RCSB entity header,
+  where `1MBA_1|Chain A|MYOGLOBIN|Aplysia limacina` keys under `1MBA_1`). This works on
+  target-decoy databases, where `sp|P1|X` and `DECOY_sp|P1|X`
   or `Reverse_sp|P1|X` share an accession.
 - `key="accession"` keys entries by accession (`P31946` for `sp|P31946|1433B_HUMAN`, or
   the whole identifier when it has no `|`). It needs unique accessions.
@@ -305,8 +307,10 @@ by_acc["P31946"]
   decompress first (`gunzip -k human.fasta.gz`). bgzip/`.gzi` is not supported.
   `compression="gzip"`/`"bz2"`/`"xz"` raises `FastaError`; `compression=None` skips the
   magic-byte check.
-- `.fai` caveats: the name column is the first header word (mapped to the accession on
-  load with `key="accession"`). Like samtools, `write_fai()` needs every sequence line of an
+- `.fai` caveats: the name column is the entry identifier (the first header word except
+  for an RCSB entity header, and mapped to the accession on load with `key="accession"`);
+  a `.fai` that samtools wrote for RCSB entity headers names them by the truncated first
+  word and is read as not belonging to the file, so rewrite it with `write_fai()`. Like samtools, `write_fai()` needs every sequence line of an
   entry but the last to have the same length, and no comment or blank lines inside a
   sequence; otherwise it raises `FastaError` (rewrite the file with `write_fasta` first).
   `from_fai` checks each entry's header against the `.fai` name but does not re-count

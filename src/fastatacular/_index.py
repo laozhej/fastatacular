@@ -14,6 +14,7 @@ from typing import Literal, cast
 from fastatacular._compression import Compression, _check_compression
 from fastatacular._models import SequenceEntry
 from fastatacular._parser import (
+    _RCSB_ID,
     _bare_accession,
     _check_preamble,
     _compression,
@@ -52,7 +53,12 @@ def _accession(identifier: str) -> str:
 
 
 def _identifier(header: bytes, start: int, path: Path) -> str:
-    """First word of a header line (without ``>``); ``start`` is its byte offset, for errors."""
+    """Identifier of a header line (without ``>``); ``start`` is its byte offset, for errors.
+
+    The rule is the parser's, so an index key is always a
+    :attr:`SequenceEntry.identifier`: the first word, except for an RCSB entity header,
+    whose identifier is its first pipe field (see ``_RCSB_ID``).
+    """
     try:
         text = header.decode("utf-8")
     except UnicodeDecodeError as e:
@@ -60,14 +66,16 @@ def _identifier(header: bytes, start: int, path: Path) -> str:
             f"Cannot decode the header at byte {start} of {path}: {e}",
             hint="FASTA input must be UTF-8 text",
         ) from e
-    words = text.split(maxsplit=1)
-    if not words:
+    stripped = text.strip()
+    if not stripped:
         raise FastaParseError(
             f"Empty FASTA header at byte {start} of {path}",
             context=">" + text,
             hint="Put an identifier right after '>'",
         )
-    return words[0]
+    if rcsb := _RCSB_ID.match(stripped):
+        return rcsb["identifier"]
+    return stripped.split(maxsplit=1)[0]
 
 
 class FastaIndex(Mapping[str, SequenceEntry]):
@@ -84,8 +92,11 @@ class FastaIndex(Mapping[str, SequenceEntry]):
         by_acc = FastaIndex("human.fasta", key="accession")
         by_acc["P31946"]
 
-    ``key="identifier"`` (the default) keys entries by the first header word, the
-    ``.fai`` name, like samtools. It works for any file with unique identifiers,
+    ``key="identifier"`` (the default) keys entries by :attr:`SequenceEntry.identifier`,
+    the first header word (the ``.fai`` name, like samtools) for every header style but
+    an RCSB entity header, whose identifier is its first pipe field
+    (``1MBA_1|Chain A|MYOGLOBIN|Aplysia limacina`` keys under ``1MBA_1``). It works for
+    any file with unique identifiers,
     including target-decoy databases where ``sp|P1|X`` and ``DECOY_sp|P1|X`` share an
     accession. ``key="accession"`` keys them by the accession (``P31946`` for
     ``sp|P31946|1433B_HUMAN``, ``NP_000240.1`` for both ``gi|4557757|ref|NP_000240.1|``
@@ -234,7 +245,7 @@ class FastaIndex(Mapping[str, SequenceEntry]):
         return start, end - start
 
     def identifier(self, key: str) -> str:
-        """Return the identifier (first header word, the ``.fai`` name) of the entry with ``key``.
+        """Return the :attr:`SequenceEntry.identifier` (the ``.fai`` name) of the entry with ``key``.
 
         Raises:
             FastaKeyError: No entry has ``key``.
@@ -247,7 +258,8 @@ class FastaIndex(Mapping[str, SequenceEntry]):
     def write_fai(self, fai_path: str | Path | None = None) -> Path:
         """Write a samtools-compatible ``.fai`` next to the file (or to ``fai_path``).
 
-        Columns: name (first header word), residue count, byte offset of the first
+        Columns: name (:attr:`SequenceEntry.identifier`, the first header word except for
+        an RCSB entity header), residue count, byte offset of the first
         residue, residues per line, bytes per line (including the line ending). Like
         samtools, every sequence line of an entry but the last must have the same length;
         blank lines are only allowed after the sequence, and ``;`` comments not at all.
@@ -315,8 +327,11 @@ class FastaIndex(Mapping[str, SequenceEntry]):
     ) -> FastaIndex:
         """Load an index from a samtools ``.fai`` (default ``path + ".fai"``) instead of scanning.
 
-        The ``.fai`` name column is the first header word; ``key`` and ``duplicates``
-        work the same way as when building the index. A ``.fai`` may leave entries out
+        The ``.fai`` name column is the entry's identifier, as :meth:`write_fai` writes
+        it; ``key`` and ``duplicates`` work the same way as when building the index. A
+        ``.fai`` that ``samtools faidx`` wrote for a file of RCSB entity headers names
+        them by the first whitespace word, which cuts inside ``Chain A``, and is read as
+        not belonging to the file; rewrite it with :meth:`write_fai`. A ``.fai`` may leave entries out
         (samtools omits repeated names): each entry ends at the next header in the file.
         Each entry's header line is checked against its name while loading, so a
         ``.fai`` that does not belong to the file raises :class:`FastaError`. Residues
