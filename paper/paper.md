@@ -65,11 +65,11 @@ Stand-alone decoy generators such as DecoyPYrat [@wright-2016] build decoy datab
 the command line.
 
 fastatacular does not replace these tools. It combines, in one small package with no
-runtime dependencies: frozen, typed entry objects; a writer that re-parses its own output;
-compressed and piped input; `.fai` indexing; and two decoy methods that we did not find in
-the Python libraries above, namely repeat-preserving de Bruijn decoys [@moosa-2020] and
-Markov-chain decoys. Its companion package, pefftacular [@pefftacular], has the same
-reader and writer API for the PSI Extended FASTA Format.
+runtime dependencies: frozen and typed entry objects, a writer that re-parses its own
+output, compressed and piped input, `.fai` indexing, and two decoy methods that we did
+not find in the Python libraries above, namely repeat-preserving de Bruijn decoys
+[@moosa-2020] and Markov-chain decoys. Its companion package, pefftacular
+[@pefftacular], has the same reader and writer API for the PSI Extended FASTA Format.
 
 # Software design
 
@@ -101,7 +101,7 @@ returns one plain dictionary per entry for pandas or polars, without depending o
 either.
 
 **Decoys.** `make_decoys` and `write_decoy_fasta` implement five methods: reverse,
-pseudo-reverse, and shuffle [@elias-2007]; de Bruijn [@moosa-2020]; and an order-2
+pseudo-reverse, and shuffle [@elias-2007], de Bruijn [@moosa-2020], and an order-2
 Markov chain. Markov models for human, mouse, yeast, and *E. coli* ship with the package.
 They were trained on UniProtKB/Swiss-Prot reference proteomes [@uniprot-2025], and users
 can train their own. Every method accepts `keep_residues` (for example `"KR"` to keep
@@ -115,9 +115,9 @@ peptides. `docs/decoys.md` lists these results for the human proteome.
 carry the line number, the offending text, and a repair hint. The test suite checks
 parsed fields against expected values from independent sources:
 
-- every example header on UniProt's FASTA-header help page;
-- real UniProtKB headers, whose expected fields come from the entries' JSON records;
-- NCBI headers, checked against NCBI esummary.
+- every example header on UniProt's FASTA-header help page,
+- real UniProtKB headers, whose expected fields come from the entries' JSON records,
+- and NCBI headers, checked against NCBI esummary.
 
 Hypothesis property tests [@maciver-2019] cover write-read round trips. Continuous
 integration runs on Python 3.12 to 3.14 on Linux, and on macOS and Windows, with the
