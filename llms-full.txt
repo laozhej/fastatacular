@@ -622,11 +622,12 @@ record's `index`, as do bad values (`pe="high"`). `9606.0` is accepted as 9606.
     index[k] -> SequenceEntry                        # reads only that entry
     k in index; len(index); list(index)              # keys in file order, no file access
     index.locate(k) -> (offset, length)              # byte range from '>' to the next '>'
-    index.identifier(k) -> str                       # first header word (.fai name)
+    index.identifier(k) -> str                       # SequenceEntry.identifier (.fai name)
 
 - FastaIndex is a read-only Mapping[str, SequenceEntry]. key="identifier" (default):
-  the first header word, the .fai name; works on target-decoy files (sp|P1|X and
-  DECOY_sp|P1|X share an accession). key="accession": the accession, or the whole
+  SequenceEntry.identifier, the .fai name: the first header word, or the first pipe field
+  of an RCSB entity header (1MBA_1|Chain A|... keys under 1MBA_1); works on target-decoy
+  files (sp|P1|X and DECOY_sp|P1|X share an accession). key="accession": the accession, or the whole
   identifier when it has no '|'. A duplicate key -> FastaError naming the first repeat
   (in accession mode, with a hint to use key="identifier"). duplicates="first" keeps
   the first entry per key and skips later ones (like samtools faidx), logging one

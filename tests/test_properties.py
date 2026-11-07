@@ -419,6 +419,7 @@ def templated_headers(draw: st.DrawFn) -> tuple[str, dict[str, Any]]:
                 "gi_pdb",
                 "ncbi_pipe",
                 "pdb",
+                "rcsb_entity",
                 "refseq",
                 "ensembl",
                 "uniref",
@@ -467,6 +468,18 @@ def templated_headers(draw: st.DrawFn) -> tuple[str, dict[str, Any]]:
         ident = f"{tag}pdb|{pdb}|{chain}"
         expected |= {"prefix": tag + "pdb", "accession": f"{pdb}_{chain}", "pname": name}
         return f">{ident} {name}", {"identifier": ident, **expected}
+    if style == "rcsb_entity":
+        # RCSB ``ENTRY_ENTITY|Chain(s) ...|molecule|organism (taxid)``: the second field
+        # holds whitespace, so the identifier is the first pipe field and is also the
+        # accession, tag and all. Fields three and four are positional free text, which no
+        # field reads.
+        entity = f"{draw(pdb_id)}_{draw(st.integers(1, 20))}"
+        chains = draw(st.lists(pdb_chain, min_size=1, max_size=3, unique=True))
+        label = f"Chain {chains[0]}" if len(chains) == 1 else f"Chains {', '.join(chains)}"
+        pname = f"{label}|{name}|{draw(organism_text)} ({draw(number)})"
+        ident = tag + entity
+        expected |= {"prefix": None, "accession": ident, "pname": pname}
+        return f">{ident}|{pname}", {"identifier": ident, **expected}
     # No pipes: the whole first word is the identifier, so it carries no db prefix. The
     # accession is the identifier itself when its shape names a database (RefSeq/GenPept,
     # Ensembl, UniRef), minus the tag; a UniParc id is left unparsed.
@@ -520,7 +533,9 @@ def test_templated_headers_parse_exactly(case: tuple[str, dict[str, Any]], seque
     want = dict.fromkeys(HEADER_FIELDS) | expected
     assert got == want
     assert entry.raw_header == header[1:]
-    assert entry.description == header[1:].split(maxsplit=1)[1]
+    # Everything after the identifier and the separator that ends it: a space, or the ``|``
+    # of an RCSB entity header.
+    assert entry.description == header[1:].removeprefix(expected["identifier"]).lstrip("| ")
     # Unedited: written verbatim. Rebuilt from the fields alone: same fields back, and stable.
     assert _write([entry], line_width=0) == f"{header}\n{sequence}\n"
     rebuilt = _write([dataclasses.replace(entry, raw_header="", description=None)])

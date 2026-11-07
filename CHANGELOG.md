@@ -4,6 +4,24 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- `FastaIndex` could not find an entry whose header is a current RCSB PDB entity header
+  (`>1MBA_1|Chain A|MYOGLOBIN|Aplysia limacina (6502)`). 1.4.0 made the parser read its
+  identifier as the first pipe field, but the index kept splitting at the first
+  whitespace, which falls inside `Chain A`, so it keyed the entry under `1MBA_1|Chain`
+  with `key="identifier"` and under `Chain` with `key="accession"`: `index["1MBA_1"]`
+  raised `FastaKeyError` for an entry that is in the file, the stored key raised
+  `FastaError` instead (the entry it read back had a different identifier), and every
+  single-chain entity in a file collided under the one key `Chain`. The index now takes
+  the identifier from the same rule as the parser, so a key is always a
+  `SequenceEntry.identifier`, in `FastaIndex`, `from_fai` and the `.fai` name column.
+  The older `pdb|1MBA|A Chain A` and `gi|229552|pdb|1MBA|A` forms are unchanged. A `.fai`
+  that `samtools faidx` wrote for RCSB entity headers names them by the truncated first
+  word and is now read as not belonging to the file; rewrite it with `write_fai()`.
+  Checked across every header style in `tests/reference/header_reference.json`: the RCSB
+  entity header was the only one where the index and the parser disagreed.
+
 ## [1.4.0] (2026-10-28)
 
 ### Added
