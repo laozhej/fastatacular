@@ -364,6 +364,12 @@ def test_crlf_bom_input_from_every_source(
 # tags search engines put in front of the identifier, must give exactly the fields
 # the template was filled with; rebuilding the header from those fields must read
 # back to the same fields.
+#
+# A green run here is not coverage of any one style: Hypothesis applies swarm testing to
+# ``sampled_from``, so a single run draws a subset of ``style``. Measured on 2026-11-05
+# over five 100-example runs, ``rcsb_entity`` came up 1, 7, 1, 14 and 0 times. A style
+# that must always be exercised needs a case in ``tests/reference/header_reference.json``
+# or a test of its own.
 
 # Tags in front of the identifier. All of them are also recognized in front of ``gi|`` and ``pdb|``.
 TAGS = [
