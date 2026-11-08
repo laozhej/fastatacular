@@ -16,6 +16,16 @@ cd fastatacular
 just install
 ```
 
+`just install` runs `uv sync`. fastatacular declares no extras, so that single command
+installs the whole development environment, including the dev group the tests need
+(pytest, Hypothesis, pandas and polars). `uv sync --all-extras` installs nothing further
+and collects the same 926 tests, measured on 1.4.1 on 2026-11-07.
+
+The collected total will not tell you whether the install worked. The pandas and polars
+tests use `pytest.importorskip`, so a run missing those two libraries still collects 926
+tests and reports 921 passed and 4 skipped where a complete environment reports 925 passed
+and 1 xfailed. Read the passed and skipped counts, not the collected total.
+
 `just --list` shows the other recipes.
 
 Install the commit hooks once per clone with `uvx pre-commit install`. On every
