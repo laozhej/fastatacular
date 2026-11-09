@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Documentation
+
+- Add README examples for pandas and polars records and conversion back to entries.
+
 ## [1.4.1] (2026-11-06)
 
 ### Fixed
