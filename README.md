@@ -290,6 +290,19 @@ by_acc = FastaIndex("human.fasta", key="accession")
 by_acc["P31946"]
 ```
 
+`locate(key)` returns an `(offset, length)` byte span covering the whole entry,
+including its header, for binary `seek`/`read`; `identifier(key)` returns its full
+identifier even when the index is keyed by accession:
+
+```python
+offset, length = by_acc.locate("P31946")
+with open("human.fasta", "rb") as handle:
+    handle.seek(offset)
+    raw_entry = handle.read(length)
+print(raw_entry.decode("utf-8"), end="")
+print(by_acc.identifier("P31946"))  # sp|P31946|1433B_HUMAN
+```
+
 - By default keys are full identifiers (`SequenceEntry.identifier`: the first header
   word, the `.fai` name, as in samtools, or the first pipe field of an RCSB entity header,
   where `1MBA_1|Chain A|MYOGLOBIN|Aplysia limacina` keys under `1MBA_1`). This works on

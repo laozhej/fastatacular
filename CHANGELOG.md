@@ -7,6 +7,8 @@ All notable changes to this project will be documented in this file.
 ### Documentation
 
 - Add README examples for pandas and polars records and conversion back to entries.
+- Show how to use `FastaIndex.locate()` for binary reads and `identifier()` to
+  retrieve a full identifier from an accession-keyed index.
 
 ## [1.4.1] (2026-11-06)
 
